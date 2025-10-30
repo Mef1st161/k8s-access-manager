@@ -26,9 +26,14 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           helm package . --version "$VERSION" --app-version "$VERSION"
-          CHART_FILE=$(ls *.tgz)
-          echo "chart_file=$CHART_FILE" >> $GITHUB_OUTPUT
-          echo "Packaged: $CHART_FILE"
+          CHART_FILE=$(find . -maxdepth 1 -name "*.tgz" -type f | head -n1)
+          if [ -z "$CHART_FILE" ]; then
+            echo "❌ No .tgz file found after helm package!"
+            exit 1
+          fi
+          CHART_NAME=$(basename "$CHART_FILE")
+          echo "chart_file=$CHART_NAME" >> "$GITHUB_OUTPUT"
+          echo "✅ Packaged: $CHART_NAME"
 
       - name: Checkout gh-pages
         uses: actions/checkout@v4
@@ -36,11 +41,11 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
-      - name: Copy chart from root to gh-pages
+      - name: Copy chart to gh-pages
         run: |
           cp "${{ steps.package.outputs.chart_file }}" gh-pages/
 
-      - name: Update index.yaml in gh-pages
+      - name: Update index.yaml
         working-directory: gh-pages
         run: |
           helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
