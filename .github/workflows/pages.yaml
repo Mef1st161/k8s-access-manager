@@ -13,15 +13,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main and gh-pages
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Checkout gh-pages
-        run: |
-          git fetch origin gh-pages
-          git worktree add gh-pages gh-pages
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
@@ -33,16 +28,24 @@ jobs:
           CHART_FILE=$(ls *.tgz)
           echo "Packaged: $CHART_FILE"
 
-      - name: Update repository
+      - name: Checkout gh-pages
         run: |
-          # Копируем chart в gh-pages директорию
-          cp *.tgz gh-pages/
+          git fetch origin gh-pages
+          git checkout gh-pages
+
+      - name: Copy chart and update index
+        run: |
+          # Копируем chart из родительской директории
+          cp $GITHUB_WORKSPACE/*.tgz ./
           
-          # Переходим в gh-pages и обновляем index
-          cd gh-pages
+          # Обновляем index.yaml
           helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
           
-          # Коммитим и пушим изменения
+          echo "Files in gh-pages:"
+          ls -la
+
+      - name: Commit and push
+        run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add .
