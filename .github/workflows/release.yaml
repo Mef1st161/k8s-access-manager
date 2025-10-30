@@ -4,59 +4,65 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Install Helm
-        run: |
-          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-          chmod 700 get_helm.sh
-          ./get_helm.sh
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: '3.12.0'
 
-      - name: Find Chart.yaml and package
+      - name: Package Helm Chart
         run: |
-          echo "=== ИЩЕМ Chart.yaml ==="
-          CHART_PATH=$(find . -name "Chart.yaml" | head -1)
-          
-          if [ -z "$CHART_PATH" ]; then
-            echo "❌ Chart.yaml НЕ НАЙДЕН!"
-            echo "Создаю минимальный Chart.yaml..."
-            mkdir -p helm-chart
-            cat > helm-chart/Chart.yaml << 'EOF'
-apiVersion: v2
-name: k8s-access-manager
-description: Kubernetes RBAC Access Manager
-type: application
-version: 0.1.0
-appVersion: "0.1.0"
-EOF
-            CHART_PATH="./helm-chart/Chart.yaml"
-          fi
-          
-          echo "✅ Найден Chart.yaml: $CHART_PATH"
-          CHART_DIR=$(dirname "$CHART_PATH")
-          echo "📁 Директория чарта: $CHART_DIR"
-          
-          # Пакетируем из найденной директории
-          helm package "$CHART_DIR" --version ${GITHUB_REF#refs/tags/v}
-          
-          echo "=== СОЗДАННЫЕ ПАКЕТЫ ==="
+          # Извлекаем версию из тега (убираем 'v')
+          VERSION=${GITHUB_REF#refs/tags/v}
+          helm package . --version $VERSION --app-version $VERSION
           ls -la *.tgz
 
-      - name: Generate repository index
+      - name: Checkout gh-pages branch
         run: |
-          helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-          echo "=== INDEX.YAML ==="
-          cat index.yaml
+          git fetch origin gh-pages
+          git checkout gh-pages
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
-          force_orphan: true
+      - name: Update Helm repository index
+        run: |
+          # Копируем новый chart в gh-pages
+          cp ../*.tgz ./
+          # Обновляем index.yaml
+          helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+
+      - name: Commit and push to gh-pages
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add .
+          git commit -m "Add chart version ${{ github.ref_name }}" || exit 0
+          git push origin gh-pages
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint Helm Chart
+        run: helm lint .
+
+      - name: Test template rendering
+        run: helm template test . --debug
