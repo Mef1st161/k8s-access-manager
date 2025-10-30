@@ -1,0 +1,27 @@
+{{- range $username, $userConfig := .Values.users }}
+{{- if $userConfig.enabled }}
+{{- $saName := include "k8s-access-manager.serviceAccountName" (dict "username" $username "userConfig" $userConfig) }}
+{{- range $clusterRoleName := $userConfig.clusterRoles }}
+{{- $roleType := include "k8s-access-manager.roleType" (dict "roleName" $clusterRoleName) }}
+{{- $actualRoleName := include "k8s-access-manager.actualRoleName" (dict "roleName" $clusterRoleName) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $.Release.Name }}-{{ $username }}-{{ $actualRoleName | replace ":" "-" }}-access
+  labels:
+    {{- include "k8s-access-manager.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: clusterrolebinding
+    username: {{ $username | quote }}
+    role-type: {{ $roleType }}
+subjects:
+- kind: ServiceAccount
+  name: {{ $saName }}
+  namespace: {{ $.Values.global.namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ $actualRoleName }}
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- end }}
+{{- end }}

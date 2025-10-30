@@ -1,0 +1,31 @@
+{{- $root := . }}
+{{- /* Создаем неймспейсные роли которые помечены create: true */}}
+{{- range $roleName, $roleConfig := $root.Values.rbacRoles }}
+{{- if and (not $roleConfig.clusterScope) $roleConfig.create }}
+{{- /* Находим все неймспейсы где нужна эта роль */}}
+{{- $processedNamespaces := dict }}
+{{- if $root.Values.users }}
+{{- range $user, $config := $root.Values.users }}
+{{- if $config.enabled }}
+{{- range $nsRole := $config.namespaceRoles }}
+{{- if and (eq $nsRole.role $roleName) (not (hasKey $processedNamespaces $nsRole.namespace)) }}
+{{- $_ := set $processedNamespaces $nsRole.namespace "" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $roleName }}
+  namespace: {{ $nsRole.namespace }}
+  labels:
+    {{- include "k8s-access-manager.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: role
+    rbac-role: {{ $roleName }}
+rules:
+{{- $roleConfig.rules | toYaml | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

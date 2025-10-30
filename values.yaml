@@ -1,0 +1,57 @@
+# ==============================================
+# k8s-access-manager - Base Configuration
+# Helm chart for managing Kubernetes RBAC access
+# ==============================================
+
+# Global settings
+global:
+  # Namespace where ServiceAccounts will be created
+  namespace: "k8s-access-users"
+
+  # Create token secrets for ServiceAccounts
+  # If false, tokens can be created manually via kubectl create token
+  createTokenSecrets: false  # ← безопаснее по умолчанию
+
+# Predefined RBAC roles that can be created by this chart
+# Set 'create: false' to use existing roles from cluster
+rbacRoles:
+  # Cluster-wide read only access
+  cluster-readonly:
+    create: false                    # ← отключено по умолчанию
+    clusterScope: true
+    rules:
+    - apiGroups: ["", "apps", "batch", "extensions", "networking.k8s.io"]
+      resources: ["*"]
+      verbs: ["get", "list", "watch"]
+
+  # Full cluster admin access (use with caution!)
+  cluster-admin:
+    create: false
+    clusterScope: true
+    rules:
+    - apiGroups: ["*"]
+      resources: ["*"]
+      verbs: ["*"]
+
+  # Read-only access within a namespace
+  namespace-readonly:
+    create: false                  # ← отключено по умолчанию
+    clusterScope: false
+    rules:
+    - apiGroups: ["", "apps", "batch", "extensions"]
+      resources: ["*"]
+      verbs: ["get", "list", "watch"]
+
+  # Full admin access within a namespace
+  namespace-admin:
+    create: false                  # ← отключено по умолчанию
+    clusterScope: false
+    rules:
+    - apiGroups: ["", "apps", "batch", "extensions"]
+      resources: ["*"]
+      verbs: ["*"]
+
+# User definitions — EMPTY by default
+# Add your users in your values file (e.g., my-dbi-users.yaml)
+users: {}
+

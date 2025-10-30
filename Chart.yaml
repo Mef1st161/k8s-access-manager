@@ -1,0 +1,16 @@
+apiVersion: v2
+name: k8s-access-manager
+description: A Helm chart for managing Kubernetes RBAC access with token-based authentication
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies: []
+
+maintainers:
+  - name: EvgenyAdlerberg
+    email: adlerbergevgeny@gmail.com
+
+annotations:
+  category: RBAC
+  description: "Manages user access with service account tokens"

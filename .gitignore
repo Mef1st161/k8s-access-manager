@@ -1,0 +1,184 @@
+# =============================================
+# Kubernetes и Helm специфичные файлы
+# =============================================
+
+# Локальные kubeconfig файлы
+kubeconfig*
+*-kubeconfig
+config
+
+# Helm файлы
+**/charts/**/*.tgz
+**/tmpcharts/
+**/charts/**/tmp/
+*.lock
+
+# Helm тестовые данные
+**/testdata/
+
+# =============================================
+# Конфиденциальные данные и секреты
+# =============================================
+
+# Файлы с секретами
+*.key
+*.pem
+*.crt
+*.csr
+*.p12
+*.pfx
+*.der
+*.cer
+
+# Файлы с паролями и токенами
+*credentials*
+*password*
+*secret*
+*token*
+*.env
+.env
+.env.local
+.env.*.local
+
+# Конфиги с чувствительными данными
+*config.yaml
+*config.yml
+*values-*.yaml
+*values-*.yml
+
+# =============================================
+# Логи и временные файлы
+# =============================================
+
+# Логи
+*.log
+logs/
+**/*.log
+**/logs/
+*.log.*
+*.log-*
+
+# Архивы
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.rar
+*.bak
+*.backup
+
+# Временные файлы
+*.tmp
+*.temp
+.tmp/
+temp/
+tmp/
+**/*.swp
+**/*.swo
+*~
+
+# =============================================
+# Системные и IDE файлы
+# =============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =============================================
+# Бинарные файлы и зависимости
+# =============================================
+
+# Исполняемые файлы (если есть билды)
+/bin/
+/dist/
+/build/
+/target/
+
+# Go (если используется)
+*.exe
+*.test
+*.out
+/bin/
+/pkg/
+
+# Node.js (если используется)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.lock-wscript
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# =============================================
+# Документация и генерируемые файлы
+# =============================================
+
+# Документация
+site/
+.sass-cache/
+.jekyll-metadata
+
+# Генерируемые файлы
+.docusaurus/
+.cache/
+.parcel-cache/
+
+# =============================================
+# GitHub и CI/CD
+# =============================================
+
+# GitHub Actions
+!.github/workflows/*.yaml
+!.github/workflows/*.yml
+
+# =============================================
+# Прочие
+# =============================================
+
+# Coverage reports
+*.lcov
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# Метафайлы
+.dockerignore
+.helmignore
+
+# Файлы линтеров
+.eslintcache
+
+# Файлы редакторов
+*.sublime-*

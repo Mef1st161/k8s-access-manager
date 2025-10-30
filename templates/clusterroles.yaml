@@ -1,0 +1,15 @@
+{{- range $roleName, $roleConfig := .Values.rbacRoles }}
+{{- if and $roleConfig.clusterScope $roleConfig.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $roleName }}
+  labels:
+    {{- include "k8s-access-manager.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: clusterrole
+    rbac-role: {{ $roleName }}
+rules:
+{{- $roleConfig.rules | toYaml | nindent 2 }}
+{{- end }}
+{{- end }}
