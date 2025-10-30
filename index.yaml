@@ -1,1 +1,21 @@
-# Helm Repository
+apiVersion: v1
+entries:
+  k8s-access-manager:
+  - annotations:
+      category: RBAC
+      description: Manages user access with service account tokens
+    apiVersion: v2
+    appVersion: 0.1.1
+    created: "2025-10-30T14:14:32.664962688Z"
+    description: A Helm chart for managing Kubernetes RBAC access with token-based
+      authentication
+    digest: 9c3bc1b11bd220f560bf8414b91f465499d86916c3839b7039456857cf6f20dd
+    maintainers:
+    - email: adlerbergevgeny@gmail.com
+      name: EvgenyAdlerberg
+    name: k8s-access-manager
+    type: application
+    urls:
+    - https://Mef1st161.github.io/k8s-access-manager/k8s-access-manager-0.1.1.tgz
+    version: 0.1.1
+generated: "2025-10-30T14:14:32.663581844Z"
