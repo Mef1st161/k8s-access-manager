@@ -28,28 +28,28 @@ jobs:
           helm package . --version "$VERSION" --app-version "$VERSION"
           CHART_FILE=$(ls *.tgz)
           echo "chart_file=$CHART_FILE" >> $GITHUB_OUTPUT
-          echo "Packaged: $CHART_FILE"
+          echo "Packaged chart: $CHART_FILE"
 
-      - name: Checkout gh-pages
+      - name: Checkout gh-pages branch
         uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: gh-pages
 
-      - name: Copy chart to gh-pages
+      - name: Copy chart to gh-pages directory
         run: |
           cp "${{ steps.package.outputs.chart_file }}" gh-pages/
 
-      - name: Update Helm index
+      - name: Update Helm repository index
         working-directory: gh-pages
         run: |
           helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
 
-      - name: Push updated gh-pages
+      - name: Commit and push to gh-pages
         working-directory: gh-pages
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           git add .
           git commit -m "Release ${{ github.ref_name }}"
           git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
