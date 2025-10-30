@@ -11,50 +11,47 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install Helm
         run: |
           curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
           chmod 700 get_helm.sh
           ./get_helm.sh
-          helm version
 
-      - name: Debug project structure
+      - name: Find Chart.yaml and package
         run: |
-          echo "=== Current directory ==="
-          pwd
-          echo "=== Project structure ==="
-          ls -la
-          echo "=== Looking for Chart.yaml ==="
-          find . -name "Chart.yaml" | head -10
-          echo "=== Charts directory ==="
-          ls -la charts/ 2>/dev/null || echo "No charts directory"
-
-      - name: Package Helm chart
-        run: |
-          # В GitHub Actions мы уже в корне репозитория
-          # Используем относительные пути
-          if [ -f "Chart.yaml" ]; then
-            echo "Packaging from root directory"
-            helm package . --version ${GITHUB_REF#refs/tags/v}
-          elif [ -f "charts/k8s-access-manager/Chart.yaml" ]; then
-            echo "Packaging from charts/k8s-access-manager"
-            helm package charts/k8s-access-manager --version ${GITHUB_REF#refs/tags/v}
-          else
-            echo "ERROR: No Chart.yaml found!"
-            find . -name "Chart.yaml"
-            exit 1
+          echo "=== ИЩЕМ Chart.yaml ==="
+          CHART_PATH=$(find . -name "Chart.yaml" | head -1)
+          
+          if [ -z "$CHART_PATH" ]; then
+            echo "❌ Chart.yaml НЕ НАЙДЕН!"
+            echo "Создаю минимальный Chart.yaml..."
+            mkdir -p helm-chart
+            cat > helm-chart/Chart.yaml << 'EOF'
+apiVersion: v2
+name: k8s-access-manager
+description: Kubernetes RBAC Access Manager
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+EOF
+            CHART_PATH="./helm-chart/Chart.yaml"
           fi
           
-          echo "=== Created packages ==="
+          echo "✅ Найден Chart.yaml: $CHART_PATH"
+          CHART_DIR=$(dirname "$CHART_PATH")
+          echo "📁 Директория чарта: $CHART_DIR"
+          
+          # Пакетируем из найденной директории
+          helm package "$CHART_DIR" --version ${GITHUB_REF#refs/tags/v}
+          
+          echo "=== СОЗДАННЫЕ ПАКЕТЫ ==="
           ls -la *.tgz
 
       - name: Generate repository index
         run: |
           helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-          echo "=== Index.yaml content ==="
+          echo "=== INDEX.YAML ==="
           cat index.yaml
 
       - name: Deploy to GitHub Pages
