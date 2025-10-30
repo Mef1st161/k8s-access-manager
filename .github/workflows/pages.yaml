@@ -4,56 +4,58 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: main-repo
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
 
-      - name: Package Helm Chart
+      - name: Package Chart
         run: |
-          cd main-repo
           VERSION=${GITHUB_REF#refs/tags/v}
           helm package . --version $VERSION --app-version $VERSION
-          echo "✅ Chart packaged:"
+          echo "Chart created:"
           ls -la *.tgz
 
-      - name: Checkout gh-pages
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages-repo
-
-      - name: Update Helm repository
+      - name: Configure Git
         run: |
-          # Копируем новый chart в gh-pages
-          cp main-repo/*.tgz gh-pages-repo/
-          
-          # Обновляем index.yaml в gh-pages
-          cd gh-pages-repo
-          helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-          
-          echo "✅ Files in gh-pages:"
-          ls -la
-          echo "✅ Index.yaml content:"
-          cat index.yaml
-
-      - name: Commit and push to gh-pages
-        run: |
-          cd gh-pages-repo
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+
+      - name: Download current index
+        run: |
+          curl -f -L -o current_index.yaml "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.yaml" || echo "No existing index"
+
+      - name: Setup gh-pages
+        run: |
+          # Создаем временную директорию для gh-pages
+          mkdir -p /tmp/gh-pages
+          git clone --branch gh-pages https://github.com/${{ github.repository }}.git /tmp/gh-pages
+
+      - name: Update repository
+        run: |
+          # Копируем новый chart
+          cp *.tgz /tmp/gh-pages/
+          
+          # Обновляем index
+          cd /tmp/gh-pages
+          if [ -f ../current_index.yaml ]; then
+            helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} --merge ../current_index.yaml
+          else
+            helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          fi
+          
+          echo "Repository contents:"
+          ls -la
+
+      - name: Deploy to gh-pages
+        run: |
+          cd /tmp/gh-pages
           git add .
-          git commit -m "🚀 Add chart version ${{ github.ref_name }}"
-          git push origin gh-pages
+          git commit -m "Release ${{ github.ref_name }}"
+          git push
