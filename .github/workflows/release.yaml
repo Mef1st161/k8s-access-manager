@@ -13,77 +13,38 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Helm
+      - name: Setup Helm
         uses: azure/setup-helm@v4
 
-      - name: Package Helm Chart
+      - name: Package Chart
         id: package
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
-          echo "Detected version from tag: $VERSION"
           helm package . --version "$VERSION" --app-version "$VERSION"
-          CHART_FILE=$(ls *.tgz)
-          if [ -z "$CHART_FILE" ]; then
-            echo "❌ No .tgz file found after packaging!"
-            exit 1
-          fi
-          echo "chart_file=$CHART_FILE" >> $GITHUB_OUTPUT
-          echo "✅ Packaged: $CHART_FILE"
-          ls -la *.tgz
+          echo "chart_file=$(ls *.tgz)" >> $GITHUB_OUTPUT
 
-      - name: Checkout gh-pages branch
+      - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: gh-pages
 
-      - name: Debug: Inspect directories before copy
-        run: |
-          echo "::group::Root directory contents"
-          ls -la
-          echo "::endgroup::"
-          echo "::group::gh-pages directory before copy"
-          ls -la gh-pages/
-          echo "::endgroup::"
-
-      - name: Copy chart to gh-pages
-        run: |
-          CHART="${{ steps.package.outputs.chart_file }}"
-          echo "Copying $CHART to gh-pages/"
-          cp "$CHART" gh-pages/
-          echo "::group::gh-pages directory after copy"
-          ls -la gh-pages/
-          echo "::endgroup::"
-
-      - name: Update Helm repository index
+      - name: Copy chart and update index
         working-directory: gh-pages
         run: |
-          echo "Generating index.yaml in gh-pages..."
+          cp "${{ steps.package.outputs.chart_file }}" .
           helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-          echo "::group::Generated index.yaml"
-          cat index.yaml
-          echo "::endgroup::"
 
-      - name: Commit and push to gh-pages
+      - name: Push to gh-pages
         working-directory: gh-pages
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add .
-          echo "::group::Git status before commit"
-          git status
-          echo "::endgroup::"
           git commit -m "Release ${{ github.ref_name }}"
           git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
-
-      - name: Verify chart is publicly accessible
-        run: |
-          URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ steps.package.outputs.chart_file }}"
-          echo "Trying to access: $URL"
-          curl -f -L "$URL" --output /dev/null
-          echo "✅ Chart is available at: $URL"
