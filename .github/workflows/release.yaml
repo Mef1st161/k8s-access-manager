@@ -26,7 +26,9 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           helm package . --version "$VERSION" --app-version "$VERSION"
-          echo "chart_file=$(ls *.tgz)" >> $GITHUB_OUTPUT
+          CHART_FILE=$(ls *.tgz)
+          echo "chart_file=$CHART_FILE" >> $GITHUB_OUTPUT
+          echo "Packaged: $CHART_FILE"
 
       - name: Checkout gh-pages
         uses: actions/checkout@v4
@@ -34,13 +36,16 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
-      - name: Copy chart and update index
+      - name: Copy chart from root to gh-pages
+        run: |
+          cp "${{ steps.package.outputs.chart_file }}" gh-pages/
+
+      - name: Update index.yaml in gh-pages
         working-directory: gh-pages
         run: |
-          cp "${{ steps.package.outputs.chart_file }}" .
           helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
 
-      - name: Push to gh-pages
+      - name: Commit and push
         working-directory: gh-pages
         run: |
           git config user.name "GitHub Actions"
