@@ -13,23 +13,21 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          path: main
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
 
       - name: Package Helm Chart
         run: |
+          cd main
           VERSION=${GITHUB_REF#refs/tags/v}
           helm package . --version $VERSION --app-version $VERSION
-          CHART_FILE=$(ls *.tgz)
-          echo "chart_file=$CHART_FILE" >> $GITHUB_OUTPUT
-
-      - name: Download existing index
-        run: |
-          # Скачиваем текущий index.yaml если существует
-          curl -f -L -o existing_index.yaml "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.yaml" || echo "No existing index"
+          echo "Packaged chart:"
+          ls -la *.tgz
 
       - name: Checkout gh-pages
         uses: actions/checkout@v4
@@ -37,20 +35,16 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
-      - name: Update repository index
+      - name: Update repository
         run: |
-          # Копируем новый chart
-          cp *.tgz gh-pages/
+          # Копируем chart из main в gh-pages
+          cp main/*.tgz gh-pages/
           
-          # Обновляем index
+          # Обновляем index в gh-pages
           cd gh-pages
-          if [ -f ../existing_index.yaml ]; then
-            helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} --merge ../existing_index.yaml
-          else
-            helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-          fi
+          helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
           
-          echo "Repository contents:"
+          echo "Files in gh-pages:"
           ls -la
           echo "Index contents:"
           cat index.yaml
