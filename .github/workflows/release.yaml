@@ -1,3 +1,4 @@
+# .github/workflows/release.yaml
 name: Release Helm Chart
 
 on:
@@ -14,37 +15,37 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup Helm
-        run: |
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: '3.14.0'
 
       - name: Package chart
         run: |
-          # Пакетируем конкретный чарт
-          helm package charts/k8s-access-manager --version ${GITHUB_REF#refs/tags/v} --app-version ${GITHUB_REF#refs/tags/v}
+          helm package charts/k8s-access-manager --version ${GITHUB_REF#refs/tags/v}
+          echo "=== Packaged charts ==="
           ls -la *.tgz
 
       - name: Generate index
         run: |
           helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          echo "=== Index.yaml content ==="
           cat index.yaml
 
       - name: Setup Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v4
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: .
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
