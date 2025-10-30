@@ -28,7 +28,7 @@ jobs:
 
       - name: Package chart
         run: |
-          helm package charts/k8s-access-manager --version ${GITHUB_REF#refs/tags/v}
+          helm package ~/k8s-access-manager --version ${GITHUB_REF#refs/tags/v}
           echo "=== Packaged charts ==="
           ls -la *.tgz
 
