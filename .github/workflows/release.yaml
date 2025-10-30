@@ -1,51 +1,65 @@
-# .github/workflows/release.yaml
 name: Release Helm Chart
 
 on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-
-permissions:
-  contents: write
-  pages: write
-  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: '3.14.0'
-
-      - name: Package chart
+      - name: Install Helm
         run: |
-          helm package ~/k8s-access-manager --version ${GITHUB_REF#refs/tags/v}
-          echo "=== Packaged charts ==="
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh
+          helm version
+
+      - name: Debug project structure
+        run: |
+          echo "=== Current directory ==="
+          pwd
+          echo "=== Project structure ==="
+          ls -la
+          echo "=== Looking for Chart.yaml ==="
+          find . -name "Chart.yaml" | head -10
+          echo "=== Charts directory ==="
+          ls -la charts/ 2>/dev/null || echo "No charts directory"
+
+      - name: Package Helm chart
+        run: |
+          # В GitHub Actions мы уже в корне репозитория
+          # Используем относительные пути
+          if [ -f "Chart.yaml" ]; then
+            echo "Packaging from root directory"
+            helm package . --version ${GITHUB_REF#refs/tags/v}
+          elif [ -f "charts/k8s-access-manager/Chart.yaml" ]; then
+            echo "Packaging from charts/k8s-access-manager"
+            helm package charts/k8s-access-manager --version ${GITHUB_REF#refs/tags/v}
+          else
+            echo "ERROR: No Chart.yaml found!"
+            find . -name "Chart.yaml"
+            exit 1
+          fi
+          
+          echo "=== Created packages ==="
           ls -la *.tgz
 
-      - name: Generate index
+      - name: Generate repository index
         run: |
           helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
           echo "=== Index.yaml content ==="
           cat index.yaml
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          force_orphan: true
